@@ -124,7 +124,7 @@ export class MockHarvester implements Harvester {
             notice_category: categories[Math.floor(Math.random() * categories.length)],
             estimated_value: Math.floor(Math.random() * 50000000) + 1000000,
             currency: 'USD',
-            location_country: ['US', 'UK', 'FR', 'NL', 'DE'][Math.floor(Math.random() * 5)],
+            location_country: ['us', 'gb', 'fr', 'nl', 'de'][Math.floor(Math.random() * 5)],
             location_region: 'Global',
             issuing_agency: agencies[Math.floor(Math.random() * agencies.length)],
             primary_domain: domains[Math.floor(Math.random() * domains.length)],
@@ -151,7 +151,7 @@ export class MockHarvester implements Harvester {
             end_date: endDate.toISOString(),
             venue: 'International Convention Center',
             city: cities[Math.floor(Math.random() * cities.length)],
-            country: ['United Kingdom', 'USA', 'France', 'Germany', 'Japan'][Math.floor(Math.random() * 5)],
+            country: ['gb', 'us', 'fr', 'de', 'jp'][Math.floor(Math.random() * 5)],
             category: categories[Math.floor(Math.random() * categories.length)]
         };
     }

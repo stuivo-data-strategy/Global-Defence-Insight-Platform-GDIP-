@@ -70,6 +70,39 @@ export class HarvesterRegistry {
 
         return { opportunities, events };
     }
+
+    /**
+     * Run a single harvester by name/id substring
+     */
+    async runOne(source: string, params: Record<string, any> = {}): Promise<{ opportunities: Opportunity[], events: Event[] }> {
+        const opportunities: Opportunity[] = [];
+        const events: Event[] = [];
+
+        const harvester = this.getAll().find(h => h.identify().id.includes(source));
+        if (!harvester) {
+            console.warn(`[Registry] No harvester found matching "${source}"`);
+            return { opportunities, events };
+        }
+
+        const metadata = harvester.identify();
+        console.log(`[Harvester] Running ${metadata.name}...`);
+
+        const rawItems: RawData[] = await harvester.fetch(params);
+        rawItems.forEach(raw => {
+            try {
+                const normalized = harvester.normalise(raw);
+                if ('noticeType' in normalized) {
+                    opportunities.push(normalized as Opportunity);
+                } else if ('eventType' in normalized) {
+                    events.push(normalized as Event);
+                }
+            } catch (e) {
+                console.error(`[Harvester] Error normalising item ${raw.id}:`, e);
+            }
+        });
+
+        return { opportunities, events };
+    }
 }
 
 // Export a singleton instance

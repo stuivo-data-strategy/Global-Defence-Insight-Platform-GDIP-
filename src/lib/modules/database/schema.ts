@@ -63,7 +63,14 @@ export const opportunities = pgTable('opportunities', {
     domain: text('domain'), // air, land, sea, cyber, space, multi
     keywords: jsonb('keywords').default([]), // array of strings
     workflowStage: text('workflow_stage').notNull().default('New'),
-    score: integer('score').default(0)
+    score: integer('score').default(0),
+
+    // CRM Tracking Fields
+    ownerId: uuid('owner_id').references(() => users.id),
+    probability: integer('probability').default(0), // 0-100 percentage
+    reviewValue: integer('review_value'),
+    bidValue: integer('bid_value'),
+    awardValue: integer('award_value')
 });
 
 export const events = pgTable('events', {
@@ -95,6 +102,19 @@ export const attachments = pgTable('attachments', {
     sizeBytes: integer('size_bytes')
 });
 
+export const activities = pgTable('activities', {
+    ...baseColumns,
+    entityId: uuid('entity_id').notNull(), // ID of Opportunity or Event
+    entityType: text('entity_type').notNull(), // 'opportunity' or 'event'
+    authorId: uuid('author_id').references(() => users.id).notNull(),
+    assignedToId: uuid('assigned_to_id').references(() => users.id),
+    type: text('type').notNull(), // 'task', 'meeting', 'milestone', 'call'
+    title: text('title').notNull(),
+    description: text('description'),
+    dueDate: timestamp('due_date'),
+    status: text('status').notNull().default('pending'), // 'pending', 'in_progress', 'completed', 'cancelled'
+});
+
 // Relations definitions
 export const usersRelations = relations(users, ({ many, one }) => ({
     workspaces: many(userWorkspaces),
@@ -110,4 +130,13 @@ export const workspacesRelations = relations(workspaces, ({ many }) => ({
 
 export const notesRelations = relations(notes, ({ one }) => ({
     author: one(users, { fields: [notes.authorId], references: [users.id] })
+}));
+
+export const opportunitiesRelations = relations(opportunities, ({ one }) => ({
+    owner: one(users, { fields: [opportunities.ownerId], references: [users.id] })
+}));
+
+export const activitiesRelations = relations(activities, ({ one }) => ({
+    author: one(users, { fields: [activities.authorId], references: [users.id] }),
+    assignedTo: one(users, { fields: [activities.assignedToId], references: [users.id] })
 }));

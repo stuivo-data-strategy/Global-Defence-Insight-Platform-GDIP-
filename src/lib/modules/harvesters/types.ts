@@ -44,6 +44,13 @@ export interface Opportunity extends BaseEntity {
   domain?: 'air' | 'land' | 'sea' | 'cyber' | 'space' | 'multi';
   keywords: string[];
   workflowStage: 'New' | 'Review' | 'Pursue' | 'Bid' | 'Closed';
+
+  // CRM Tracking Fields
+  ownerId?: string | null;
+  probability?: number | null;
+  reviewValue?: number | null;
+  bidValue?: number | null;
+  awardValue?: number | null;
 }
 
 export interface Event extends BaseEntity {
