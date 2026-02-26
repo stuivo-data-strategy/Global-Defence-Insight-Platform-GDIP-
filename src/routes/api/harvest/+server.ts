@@ -4,6 +4,9 @@ import { MockHarvester } from '$lib/modules/harvesters/mock/MockHarvester';
 import { TedHarvester } from '$lib/modules/harvesters/ted/TedHarvester';
 import { SamGovHarvester } from '$lib/modules/harvesters/sam/SamGovHarvester';
 import { ContractsFinderHarvester } from '$lib/modules/harvesters/contractsfinder/ContractsFinderHarvester';
+import { NspaHarvester } from '$lib/modules/harvesters/nspa/NspaHarvester';
+import { AusTenderHarvester } from '$lib/modules/harvesters/austender/AusTenderHarvester';
+import { CanadaBuysHarvester } from '$lib/modules/harvesters/canadabuys/CanadaBuysHarvester';
 import { db } from '$lib/modules/database/client';
 import { opportunities, events, workspaces } from '$lib/modules/database/schema';
 
@@ -12,6 +15,9 @@ harvesterRegistry.register(new MockHarvester());
 harvesterRegistry.register(new TedHarvester());
 harvesterRegistry.register(new SamGovHarvester());
 harvesterRegistry.register(new ContractsFinderHarvester());
+harvesterRegistry.register(new NspaHarvester());
+harvesterRegistry.register(new AusTenderHarvester());
+harvesterRegistry.register(new CanadaBuysHarvester());
 
 import type { RequestEvent } from './$types';
 

@@ -76,12 +76,35 @@ export class ContractsFinderHarvester implements Harvester {
 
             console.log(`[ContractsFinder] Received ${notices.length} notices (hitCount: ${data.hitCount || 'unknown'})`);
 
-            return notices.map((notice: any, index: number) => ({
-                id: notice.releases?.[0]?.id || notice.uri || `cf-${Date.now()}-${index}`,
-                source: 'UK Contracts Finder',
-                harvestedAt: new Date(),
-                rawPayload: notice,
-            }));
+            // Debug: log the first notice structure
+            if (notices.length > 0) {
+                console.log(`[ContractsFinder] First notice keys:`, JSON.stringify(Object.keys(notices[0])));
+                // CF wraps in { score, item } — dig into item
+                const first = notices[0].item || notices[0];
+                console.log(`[ContractsFinder] First item keys:`, JSON.stringify(Object.keys(first)).substring(0, 500));
+                // Log string fields for structure discovery
+                for (const key of Object.keys(first)) {
+                    const val = first[key];
+                    if (typeof val === 'string' && val.length < 300) {
+                        console.log(`[ContractsFinder] item.${key} =`, val);
+                    } else if (typeof val === 'number') {
+                        console.log(`[ContractsFinder] item.${key} =`, val);
+                    } else if (typeof val === 'object' && val !== null) {
+                        console.log(`[ContractsFinder] item.${key} keys:`, JSON.stringify(Object.keys(val)).substring(0, 200));
+                    }
+                }
+            }
+
+            // Unwrap { score, item } wrapper if present
+            return notices.map((notice: any, index: number) => {
+                const inner = notice.item || notice;
+                return {
+                    id: inner.id || inner.noticeIdentifier || inner.uri || `cf-${Date.now()}-${index}`,
+                    source: 'UK Contracts Finder',
+                    harvestedAt: new Date(),
+                    rawPayload: inner,
+                };
+            });
         } catch (error: any) {
             console.error('[ContractsFinder] Fetch failed:', error.message);
             return [];
@@ -91,27 +114,23 @@ export class ContractsFinderHarvester implements Harvester {
     normalise(raw: RawData): Opportunity {
         const p = raw.rawPayload;
 
-        // CF uses OCDS (Open Contracting Data Standard) format
-        const release = p.releases?.[0] || p;
-        const tender = release.tender || {};
-        const buyer = release.buyer || {};
+        // UK CF v2 uses a flat structure with direct field names
+        const title = p.title || 'Untitled UK Contract';
+        const description = p.description || p.cpvDescriptionExpanded || p.cpvDescription || '';
 
-        const title = tender.title || release.title || p.title || 'Untitled UK Contract';
-        const description = tender.description || release.description || p.description || '';
+        // Determine the best value: awarded > high > low
+        const value = p.awardedValue || p.valueHigh || p.valueLow || undefined;
+        const numericValue = typeof value === 'number' ? value :
+            typeof value === 'string' ? parseFloat(value) : undefined;
 
-        // Map CF status to notice type
+        // Map notice status
         const statusMap: Record<string, string> = {
-            'planning': 'Prior Information Notice',
-            'planned': 'Prior Information Notice',
-            'active': 'Contract Notice',
-            'closed': 'Contract Notice',
-            'complete': 'Contract Award',
+            'published': 'Contract Notice',
+            'awarded': 'Contract Award',
+            'closed': 'Closed',
+            'withdrawn': 'Withdrawn',
             'cancelled': 'Cancelled',
-            'unsuccessful': 'Cancelled',
         };
-
-        const value = tender.value?.amount || tender.minValue?.amount || undefined;
-        const currency = tender.value?.currency || tender.minValue?.currency || 'GBP';
 
         const opp: Opportunity = {
             id: `cf-${raw.id}`,
@@ -120,17 +139,17 @@ export class ContractsFinderHarvester implements Harvester {
             updatedAt: new Date(),
             title: this.cleanText(title),
             description: this.cleanText(description).substring(0, 2000),
-            sourceUrl: `https://www.contractsfinder.service.gov.uk/notice/${raw.id}`,
-            publishedAt: release.date ? new Date(release.date) : new Date(),
-            deadlineAt: tender.tenderPeriod?.endDate ? new Date(tender.tenderPeriod.endDate) : undefined,
-            noticeType: statusMap[tender.status?.toLowerCase()] || tender.status || 'Contract Notice',
-            valueExt: value,
-            valueCurrency: currency,
+            sourceUrl: `https://www.contractsfinder.service.gov.uk/notice/${p.id || raw.id}`,
+            publishedAt: p.publishedDate ? new Date(p.publishedDate) : new Date(),
+            deadlineAt: p.deadlineDate ? new Date(p.deadlineDate) : undefined,
+            noticeType: statusMap[p.noticeStatus?.toLowerCase()] || p.noticeType || 'Contract Notice',
+            valueExt: numericValue && !isNaN(numericValue) ? numericValue : undefined,
+            valueCurrency: 'GBP',
             country: 'gb',
-            region: buyer.address?.region || buyer.address?.locality || 'United Kingdom',
-            organisation: buyer.name || 'UK Government',
+            region: p.regionText || p.region || 'United Kingdom',
+            organisation: p.organisationName || 'UK Government',
             domain: this.inferDomain(title, description),
-            keywords: this.extractKeywords(tender),
+            keywords: this.extractKeywords(p),
             workflowStage: 'New',
         };
 
@@ -183,15 +202,11 @@ export class ContractsFinderHarvester implements Harvester {
         return 'multi';
     }
 
-    private extractKeywords(tender: any): string[] {
+    private extractKeywords(notice: any): string[] {
         const tags: string[] = ['defence', 'UK', 'procurement'];
-        if (tender.items) {
-            tender.items.forEach((item: any) => {
-                if (item.classification?.description) {
-                    tags.push(item.classification.description);
-                }
-            });
-        }
-        return tags.slice(0, 10); // Limit to 10 keywords
+        if (notice.cpvDescription) tags.push(notice.cpvDescription);
+        if (notice.sector) tags.push(notice.sector);
+        if (notice.noticeType) tags.push(notice.noticeType);
+        return tags.slice(0, 10);
     }
 }
