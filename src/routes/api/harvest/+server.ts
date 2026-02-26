@@ -2,13 +2,16 @@ import { json } from '@sveltejs/kit';
 import { harvesterRegistry } from '$lib/modules/harvesters/registry';
 import { MockHarvester } from '$lib/modules/harvesters/mock/MockHarvester';
 import { TedHarvester } from '$lib/modules/harvesters/ted/TedHarvester';
+import { SamGovHarvester } from '$lib/modules/harvesters/sam/SamGovHarvester';
+import { ContractsFinderHarvester } from '$lib/modules/harvesters/contractsfinder/ContractsFinderHarvester';
 import { db } from '$lib/modules/database/client';
 import { opportunities, events, workspaces } from '$lib/modules/database/schema';
 
 // Auto-register all harvesters
-// In the future, this registration could happen at app startup from config
 harvesterRegistry.register(new MockHarvester());
 harvesterRegistry.register(new TedHarvester());
+harvesterRegistry.register(new SamGovHarvester());
+harvesterRegistry.register(new ContractsFinderHarvester());
 
 import type { RequestEvent } from './$types';
 

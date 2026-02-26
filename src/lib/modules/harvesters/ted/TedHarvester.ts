@@ -134,30 +134,47 @@ export class TedHarvester implements Harvester {
     normalise(raw: RawData): Opportunity {
         const p = raw.rawPayload;
 
-        // Extract fields — TED API uses various casing/nesting patterns
-        const title = this.extractField(p, ['title', 'BT-21-Procedure', 'contract-title']) || 'Untitled TED Notice';
-        const description = this.extractField(p, ['description', 'short-description', 'BT-24-Procedure', 'shortDescription']) || '';
-        const buyerCountry = this.extractField(p, ['buyer-country', 'buyerCountry', 'country']) || '';
-        const buyerCity = this.extractField(p, ['buyer-city', 'buyerCity', 'city']) || '';
-        const buyerName = this.extractField(p, ['buyer-name', 'buyerName', 'organisation']) || '';
-        const noticeType = this.extractField(p, ['notice-type', 'noticeType', 'formType']) || 'Contract Notice';
-        const estimatedValue = this.extractNumericField(p, ['estimated-value', 'estimatedValue', 'value']);
-        const publicationDate = this.extractField(p, ['publication-date', 'publicationDate', 'PD']);
-        const deadlineDate = this.extractField(p, ['deadline-receipt-tenders', 'deadlineDate', 'DT']);
+        // Extract fields using exact TED v3 response keys
+        // Title: deeply traverse nested structures (TED returns arrays of multilingual objects)
+        const title = this.extractTitle(p) || 'Untitled TED Notice';
+        const description = this.extractField(p, ['BT-24-Procedure', 'description', 'short-description']) || '';
+        const buyerCountry = this.extractField(p, ['buyer-country', 'country']) || '';
+        const buyerCity = this.extractField(p, ['buyer-city', 'city']) || '';
+        const buyerName = this.extractField(p, ['buyer-name', 'organisation']) || '';
+        const noticeSubtype = this.extractField(p, ['notice-subtype', 'notice-type', 'formType']) || 'cn';
+        const estimatedValue = this.extractNumericField(p, ['estimated-value-part', 'total-value', 'estimated-value']);
         const cpvCodes = this.extractCpvCodes(p);
-        const docNumber = this.extractField(p, ['document-number', 'documentNumber', 'NO']) || raw.id;
+        const noticeId = this.extractField(p, ['notice-identifier']) || raw.id;
+        const pubNumber = this.extractField(p, ['publication-number']) || '';
+
+        // Extract publication date from publication-number (format: NNNNNNNN-YYYY)
+        // or from a direct date field
+        let pubDate: Date | undefined;
+        if (pubNumber && pubNumber.includes('-')) {
+            const year = pubNumber.split('-').pop();
+            if (year && year.length === 4) {
+                pubDate = new Date(); // Use current date as TED doesn't directly return pub date in search
+            }
+        }
+
+        // Extract source URL from links array if available
+        let sourceUrl = `${TED_NOTICE_URL}/${noticeId}`;
+        if (p.links && Array.isArray(p.links)) {
+            const htmlLink = p.links.find((l: any) => l.type === 'html' || l.rel === 'self');
+            if (htmlLink?.href) sourceUrl = htmlLink.href;
+        }
 
         const opp: Opportunity = {
-            id: `ted-${docNumber}`,
+            id: `ted-${noticeId}`,
             workspaceId: 'system-workspace',
             createdAt: new Date(),
             updatedAt: new Date(),
             title: this.cleanText(title),
             description: this.cleanText(description),
-            sourceUrl: `${TED_NOTICE_URL}/${docNumber}`,
-            publishedAt: publicationDate ? new Date(publicationDate) : new Date(),
-            deadlineAt: deadlineDate ? new Date(deadlineDate) : undefined,
-            noticeType: NOTICE_TYPE_MAP[noticeType.toLowerCase()] || noticeType,
+            sourceUrl,
+            publishedAt: pubDate || new Date(),
+            deadlineAt: undefined,
+            noticeType: NOTICE_TYPE_MAP[noticeSubtype.toLowerCase()] || noticeSubtype,
             valueExt: estimatedValue || undefined,
             valueCurrency: 'EUR',
             country: this.normaliseCountryCode(buyerCountry),
@@ -231,7 +248,7 @@ export class TedHarvester implements Harvester {
     }
 
     private extractCpvCodes(obj: any): string[] {
-        const raw = obj.cpv || obj['cpv-code'] || obj.cpvCodes || [];
+        const raw = obj['main-classification-proc'] || obj.cpv || obj['cpv-code'] || obj.cpvCodes || [];
         if (Array.isArray(raw)) return raw.map((c: any) => c.toString());
         if (typeof raw === 'string') return [raw];
         return [];
@@ -247,13 +264,98 @@ export class TedHarvester implements Harvester {
     }
 
     private normaliseCountryCode(code: string): string {
-        // TED uses ISO 3166-1 alpha-2 codes but in uppercase
-        // Our UI expects lowercase for flagcdn
+        // TED v3 returns ISO 3166-1 alpha-3 codes (e.g. DEU, ESP, POL)
+        // flagcdn requires lowercase alpha-2 codes (e.g. de, es, pl)
         if (!code) return '';
-        const cleaned = code.trim().toLowerCase();
-        // Handle "United Kingdom" special case
-        if (cleaned === 'uk') return 'gb';
-        return cleaned;
+        const cleaned = code.trim().toUpperCase();
+
+        // ISO 3166-1 alpha-3 → alpha-2 mapping for EU/EEA + key NATO countries
+        const alpha3to2: Record<string, string> = {
+            AUT: 'at', BEL: 'be', BGR: 'bg', HRV: 'hr', CYP: 'cy',
+            CZE: 'cz', DNK: 'dk', EST: 'ee', FIN: 'fi', FRA: 'fr',
+            DEU: 'de', GRC: 'gr', HUN: 'hu', IRL: 'ie', ITA: 'it',
+            LVA: 'lv', LTU: 'lt', LUX: 'lu', MLT: 'mt', NLD: 'nl',
+            POL: 'pl', PRT: 'pt', ROU: 'ro', SVK: 'sk', SVN: 'si',
+            ESP: 'es', SWE: 'se', NOR: 'no', ISL: 'is', LIE: 'li',
+            CHE: 'ch', GBR: 'gb', USA: 'us', CAN: 'ca', TUR: 'tr',
+            AUS: 'au', JPN: 'jp', KOR: 'kr', ISR: 'il', UKR: 'ua',
+            GEO: 'ge', MDA: 'md', ALB: 'al', MNE: 'me', MKD: 'mk',
+            SRB: 'rs', BIH: 'ba', XKX: 'xk',
+        };
+
+        // If it looks like alpha-3, convert
+        if (cleaned.length === 3 && alpha3to2[cleaned]) {
+            return alpha3to2[cleaned];
+        }
+
+        // If it's already 2 chars, just lowercase
+        if (cleaned.length === 2) {
+            const lc = cleaned.toLowerCase();
+            return lc === 'uk' ? 'gb' : lc;
+        }
+
+        // Try first 3 chars for alpha-3 match
+        const prefix = cleaned.substring(0, 3);
+        if (alpha3to2[prefix]) return alpha3to2[prefix];
+
+        return cleaned.toLowerCase().substring(0, 2);
+    }
+
+    /**
+     * Deep title extraction — TED returns title-lot as various nested structures:
+     * - string: "Title text"
+     * - array: ["Title text"] or [{en: "Title"}]
+     * - object: {en: "Title"} or {0: {en: "Title"}}
+     */
+    private extractTitle(payload: any): string | undefined {
+        // Try title-lot first (most common in TED v3)
+        const titleLot = payload['title-lot'];
+        if (titleLot) {
+            const extracted = this.deepExtractString(titleLot);
+            if (extracted && extracted.length > 3) return extracted;
+        }
+
+        // Fallback: BT-21-Procedure
+        const bt21 = payload['BT-21-Procedure'];
+        if (bt21) {
+            const extracted = this.deepExtractString(bt21);
+            if (extracted && extracted.length > 3) return extracted;
+        }
+
+        // Fallback: use first 120 chars of description as title
+        const desc = this.extractField(payload, ['BT-24-Procedure', 'description']);
+        if (desc) {
+            const text = this.cleanText(desc);
+            if (text.length > 120) return text.substring(0, 117) + '...';
+            return text;
+        }
+
+        return undefined;
+    }
+
+    private deepExtractString(val: any): string | undefined {
+        if (!val) return undefined;
+        if (typeof val === 'string') return val;
+        if (Array.isArray(val)) {
+            // Try each element
+            for (const item of val) {
+                const result = this.deepExtractString(item);
+                if (result && result.length > 3) return result;
+            }
+            return undefined;
+        }
+        if (typeof val === 'object') {
+            // Try language keys first
+            if (val.en) return val.en;
+            if (val.EN) return val.EN;
+            // Try any value
+            const values = Object.values(val);
+            for (const v of values) {
+                const result = this.deepExtractString(v);
+                if (result && result.length > 3) return result;
+            }
+        }
+        return val?.toString();
     }
 
     private cleanText(text: string): string {
