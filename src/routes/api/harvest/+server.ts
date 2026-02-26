@@ -54,7 +54,7 @@ export async function POST({ request }: RequestEvent) {
                 publishedAt: o.publishedAt ? new Date(o.publishedAt) : undefined,
                 deadlineAt: o.deadlineAt ? new Date(o.deadlineAt) : undefined,
                 noticeType: o.noticeType,
-                valueExt: o.valueExt,
+                valueExt: o.valueExt ? Math.round(o.valueExt) : undefined,
                 valueCurrency: o.valueCurrency,
                 country: o.country,
                 region: o.region,

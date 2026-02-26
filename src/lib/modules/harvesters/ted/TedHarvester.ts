@@ -33,12 +33,58 @@ const CPV_DOMAIN_MAP: Record<string, Opportunity['domain']> = {
 
 // Map TED notice types to our internal types
 const NOTICE_TYPE_MAP: Record<string, string> = {
+    // Text aliases
     'pin': 'Prior Information Notice',
     'cn': 'Contract Notice',
     'can': 'Contract Award',
     'veat': 'Voluntary Ex-Ante Transparency',
     'corr': 'Corrigendum',
     'subco': 'Subcontracting',
+    // eForms numeric subtypes (Annex I)
+    // Planning notices
+    '1': 'PIN – General (Directive 2014/24/EU)',
+    '2': 'PIN – General (Directive 2014/25/EU)',
+    '3': 'PIN – Call for Competition (2014/24)',
+    '4': 'PIN – Call for Competition (2014/25)',
+    '5': 'PIN – Only for Information (2014/24)',
+    '6': 'PIN – Only for Information (2014/25)',
+    '7': 'PIN – Buyer Profile (2014/24)',
+    '8': 'PIN – Buyer Profile (2014/25)',
+    '9': 'PIN – Defence/Security (2009/81)',
+    '10': 'PIN – Concessions (2014/23)',
+    '11': 'PIN – Social (2014/24)',
+    '12': 'PIN – Social (2014/25)',
+    '13': 'PIN – Concession Social',
+    '14': 'PIN – Design Contest',
+    // Competition notices (Contract Notices)
+    '15': 'Contract Notice – Accelerated (2014/24)',
+    '16': 'Contract Notice (2014/24/EU)',
+    '17': 'Contract Notice (2014/25/EU)',
+    '18': 'Contract Notice – Defence (2009/81)',
+    '19': 'Concession Notice',
+    '20': 'Contract Notice – Light Regime',
+    '21': 'Contract Notice – Social (2014/25)',
+    '22': 'Concession Notice – Social',
+    '23': 'Design Contest Notice',
+    '24': 'Qualification System – Utilities',
+    // Direct Award / VEAT
+    '25': 'Concession Award – Direct',
+    '26': 'Award Without Prior Publication',
+    '27': 'Voluntary Ex-Ante Transparency (VEAT)',
+    '28': 'Award – Defence Direct (2009/81)',
+    // Result notices (Contract Awards)
+    '29': 'Contract Award Notice (2014/24/EU)',
+    '30': 'Contract Award Notice (2014/25/EU)',
+    '31': 'Award – Defence (2009/81)',
+    '32': 'Concession Award Notice',
+    '33': 'Award – Light Regime',
+    '34': 'Award – Social (2014/25)',
+    '35': 'Concession Award – Social',
+    '36': 'Design Contest Result',
+    // Modification notices
+    '38': 'Contract Modification',
+    '39': 'Concession Modification',
+    '40': 'Modification – Light Regime',
 };
 
 const TED_API_BASE = 'https://api.ted.europa.eu/v3';

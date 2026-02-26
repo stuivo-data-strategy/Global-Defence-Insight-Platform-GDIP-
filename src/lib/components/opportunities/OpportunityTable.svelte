@@ -59,6 +59,23 @@
             maximumSignificantDigits: 3,
         }).format(val);
     };
+    // Derive source from sourceUrl since DB IDs are auto-generated UUIDs
+    const getSource = (row: any): { label: string; color: string } => {
+        const url = (row.sourceUrl || "").toLowerCase();
+        if (url.includes("ted.europa.eu"))
+            return { label: "🇪🇺 TED", color: "text-blue-400" };
+        if (url.includes("contractsfinder"))
+            return { label: "🇬🇧 UK CF", color: "text-red-400" };
+        if (url.includes("nspa") || url.includes("nato"))
+            return { label: "🌐 NATO", color: "text-cyan-400" };
+        if (url.includes("sam.gov"))
+            return { label: "🇺🇸 SAM", color: "text-indigo-400" };
+        if (url.includes("tenders.gov.au"))
+            return { label: "🇦🇺 AusTender", color: "text-yellow-400" };
+        if (url.includes("canadabuys") || url.includes("canada.ca"))
+            return { label: "🇨🇦 Canada", color: "text-orange-400" };
+        return { label: "—", color: "text-slate-500" };
+    };
 </script>
 
 <div
@@ -89,6 +106,7 @@
                             {/if}
                         </div>
                     </th>
+                    <th class="px-6 py-4">Source</th>
                     <th
                         class="px-6 py-4 cursor-pointer hover:bg-slate-700/50 transition-colors group"
                         on:click={() => handleSort("country")}
@@ -182,6 +200,13 @@
                             title={row.title}
                         >
                             {row.title}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span
+                                class="{getSource(row)
+                                    .color} text-xs font-semibold whitespace-nowrap"
+                                >{getSource(row).label}</span
+                            >
                         </td>
                         <td class="px-6 py-4 flex items-center gap-3">
                             {#if row.country}
