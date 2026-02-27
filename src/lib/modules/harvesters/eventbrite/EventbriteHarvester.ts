@@ -62,6 +62,8 @@ export class EventbriteHarvester implements Harvester {
                 const res = await fetch(`${EVENTBRITE_API_BASE}/events/search/?${searchParams.toString()}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
+                        // Eventbrite supports Private Tokens when Bearer doesn't work for certain endpoints
+                        'Private-Token': token,
                         'Accept': 'application/json'
                     }
                 });

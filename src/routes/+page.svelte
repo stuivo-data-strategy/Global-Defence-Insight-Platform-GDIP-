@@ -127,7 +127,7 @@
             const res = await fetch("/api/harvest", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ count: 12 }),
+                body: JSON.stringify({ count: 15, source: "all" }),
             });
 
             if (res.ok) {
@@ -144,13 +144,13 @@
     }
 </script>
 
-<div class="flex h-full w-full bg-[#0a0f1c] relative overflow-hidden">
+<div class="flex h-full w-full bg-[#111827] relative overflow-hidden">
     <!-- Add subtle background glowing orbs -->
     <div
-        class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen mix-blend-color-dodge"
+        class="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-[120px] pointer-events-none mix-blend-screen mix-blend-color-dodge"
     ></div>
     <div
-        class="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[150px] pointer-events-none mix-blend-screen mix-blend-color-dodge"
+        class="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-indigo-600/5 rounded-full blur-[150px] pointer-events-none mix-blend-screen mix-blend-color-dodge"
     ></div>
 
     <!-- Main Sidebar Navigation -->
@@ -160,7 +160,7 @@
     <main class="flex-1 flex flex-col min-w-0 z-10">
         <!-- Top Header -->
         <header
-            class="h-20 flex items-center justify-between px-8 border-b border-slate-800/60 bg-slate-900/40 backdrop-blur-md sticky top-0 z-20"
+            class="h-20 flex items-center justify-between px-8 border-b border-slate-700/60 bg-slate-800/40 backdrop-blur-md sticky top-0 z-20"
         >
             <!-- Search Bar -->
             <div class="relative w-96 max-w-full">
@@ -171,7 +171,7 @@
                     type="text"
                     bind:value={searchQuery}
                     placeholder="Search opportunities, regions, or agencies..."
-                    class="w-full h-10 bg-slate-800/50 border border-slate-700/60 rounded-xl pl-10 pr-4 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium"
+                    class="w-full h-10 bg-slate-700/50 border border-slate-600/60 rounded-xl pl-10 pr-4 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium"
                 />
             </div>
 
@@ -245,10 +245,10 @@
                     />
                 {:else}
                     <div
-                        class="flex flex-col items-center justify-center h-64 border border-dashed border-slate-700 rounded-2xl bg-slate-800/30"
+                        class="flex flex-col items-center justify-center h-64 border border-dashed border-slate-600 rounded-2xl bg-slate-700/30"
                     >
                         <div
-                            class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-slate-500"
+                            class="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center mb-4 text-slate-400"
                         >
                             <Search class="w-6 h-6" />
                         </div>

@@ -4,7 +4,7 @@
     import type { Event } from "$lib/modules/harvesters/types";
     import { Search, Bell, Loader2, Calendar } from "lucide-svelte";
     import type { PageData } from "./$types";
-    import defenceSeedUrls from '$lib/harvest_seeds/defenceSeedUrls';
+    import defenceSeedUrls from "$lib/harvest_seeds/defenceSeedUrls";
 
     export let data: PageData;
     $: events = data.events || [];
@@ -22,6 +22,28 @@
         );
     });
 
+    let viewMode: "grid" | "list" = "list";
+    let selectedCategory = "all";
+    let selectedSort = "upcoming";
+
+    // Create a new derived state for completely filtered and sorted events
+    $: sortedAndFilteredEvents = filteredEvents
+        .filter((evt) => {
+            if (selectedCategory === "all") return true;
+            return evt.eventType === selectedCategory;
+        })
+        .sort((a, b) => {
+            if (selectedSort === "upcoming") {
+                return (
+                    new Date(a.startDate).getTime() -
+                    new Date(b.startDate).getTime()
+                );
+            } else if (selectedSort === "name") {
+                return (a.name || "").localeCompare(b.name || "");
+            }
+            return 0;
+        });
+
     // Harvesting state and actions
     let harvesting = false;
 
@@ -32,61 +54,77 @@
             // Seed URLs to try extracting schema.org JSON-LD from industry listing pages
             const seedUrls = defenceSeedUrls;
 
-            const defenceQuery = 'defence OR defense OR military OR "defence expo" OR "defense expo" OR conference OR summit OR exhibition';
+            const defenceQuery =
+                'defence OR defense OR military OR "defence expo" OR "defense expo" OR conference OR summit OR exhibition';
 
-            const sources = ['meetup-harvester', 'tentimes-harvester', 'schema-org-harvester'];
+            const sources = [
+                "meetup-harvester",
+                "tentimes-harvester",
+                "schema-org-harvester",
+            ];
             for (const s of sources) {
-                await fetch('/api/harvest', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ count: 500, source: s, urls: seedUrls, q: defenceQuery, defenceOnly: true })
+                await fetch("/api/harvest", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        count: 500,
+                        source: s,
+                        urls: seedUrls,
+                        q: defenceQuery,
+                        defenceOnly: true,
+                    }),
                 });
             }
 
             location.reload();
         } catch (e) {
-            console.error('Harvest failed', e);
-            alert('Harvest failed. See console for details.');
+            console.error("Harvest failed", e);
+            alert("Harvest failed. See console for details.");
         } finally {
             harvesting = false;
         }
     }
 
     async function clearMockEvents() {
-        if (!confirm('Delete mock events? This cannot be undone.')) return;
+        if (!confirm("Delete mock events? This cannot be undone.")) return;
         try {
-            const res = await fetch('/api/events/clear-mock', { method: 'POST' });
+            const res = await fetch("/api/events/clear-mock", {
+                method: "POST",
+            });
             const j = await res.json();
             if (j.success) {
                 alert(`Deleted ${j.deleted || 0} mock events`);
                 location.reload();
             } else {
-                alert('Failed to delete mock events: ' + (j.error || 'unknown'));
+                alert(
+                    "Failed to delete mock events: " + (j.error || "unknown"),
+                );
             }
         } catch (e) {
             console.error(e);
-            alert('Failed to clear mock events');
+            alert("Failed to clear mock events");
         }
     }
 
     async function purgeAllEvents() {
-        if (!confirm('Delete ALL events? This will remove every event record.')) return;
+        if (!confirm("Delete ALL events? This will remove every event record."))
+            return;
         try {
-            const res = await fetch('/api/events/purge', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ confirm: true })
+            const res = await fetch("/api/events/purge", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ confirm: true }),
             });
             const j = await res.json();
             if (j.success) {
-                alert('All events deleted');
+                alert("All events deleted");
                 location.reload();
             } else {
-                alert('Failed to delete events: ' + (j.error || 'unknown'));
+                alert("Failed to delete events: " + (j.error || "unknown"));
             }
         } catch (e) {
             console.error(e);
-            alert('Failed to delete events');
+            alert("Failed to delete events");
         }
     }
 </script>
@@ -136,10 +174,14 @@
         </header>
 
         <!-- Scrollable Content -->
-        <div class="flex-1 overflow-y-auto p-8 no-scrollbar scroll-smooth">
-            <div class="max-w-[1600px] mx-auto">
+        <div
+            class="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar scroll-smooth"
+        >
+            <div class="max-w-[1400px] mx-auto">
                 <!-- Page Header -->
-                <div class="flex items-end justify-between mb-8">
+                <div
+                    class="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 gap-4"
+                >
                     <div>
                         <h1
                             class="text-3xl font-bold tracking-tight text-white mb-2 flex items-center gap-3"
@@ -153,55 +195,90 @@
                         </p>
                     </div>
 
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 flex-wrap">
                         <button
-                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                            on:click={harvestEvents}
+                            class="bg-slate-800 text-slate-300 border border-slate-700 font-semibold text-sm px-4 py-2 rounded-lg hover:bg-slate-700 hover:text-white transition"
+                            on:click={() =>
+                                (viewMode =
+                                    viewMode === "grid" ? "list" : "grid")}
                         >
-                            Harvest Events
-                        </button>
-                        <button
-                            class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-                            on:click={clearMockEvents}
-                        >
-                            Clear Mock Events
-                        </button>
-                        <button
-                            class="bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 transition"
-                            on:click={purgeAllEvents}
-                        >
-                            Delete All Events
+                            Toggle View: {viewMode === "grid" ? "List" : "Grid"}
                         </button>
                     </div>
-                    <!-- We can add 'Filter Views' here later just like Opportunities -->
                 </div>
 
-                
+                <!-- Filters Bar -->
+                <div
+                    class="bg-slate-900/50 border border-slate-800/60 rounded-xl p-4 mb-6 flex flex-wrap gap-4 items-center justify-between"
+                >
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="text-sm font-semibold text-slate-400"
+                            >Filter:</span
+                        >
+                        <select
+                            bind:value={selectedCategory}
+                            class="bg-slate-800 border border-slate-700 text-sm text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500"
+                        >
+                            <option value="all">All Types</option>
+                            <option value="expo">Expo</option>
+                            <option value="conference">Conference</option>
+                            <option value="trade_show">Trade Show</option>
+                            <option value="innovation">Innovation</option>
+                        </select>
+                        <select
+                            bind:value={selectedSort}
+                            class="bg-slate-800 border border-slate-700 text-sm text-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500"
+                        >
+                            <option value="upcoming"
+                                >Sort: Upcoming First</option
+                            >
+                            <option value="name">Sort: Name (A-Z)</option>
+                        </select>
+                    </div>
 
-                <!-- Events Grid -->
-                {#if filteredEvents.length > 0}
+                    <div class="flex items-center gap-2">
+                        <button
+                            class="bg-blue-600/20 text-blue-400 border border-blue-500/50 text-xs px-3 py-1.5 rounded-lg hover:bg-blue-600 hover:text-white transition font-medium"
+                            on:click={harvestEvents}
+                            disabled={harvesting}
+                        >
+                            {#if harvesting}
+                                <Loader2
+                                    class="w-3 h-3 animate-spin inline mr-1"
+                                /> Harvesting...
+                            {:else}
+                                Harvest Events
+                            {/if}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Events Layout -->
+                {#if sortedAndFilteredEvents.length > 0}
                     <div
-                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6"
+                        class={viewMode === "grid"
+                            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                            : "flex flex-col gap-4"}
                     >
-                        {#each filteredEvents as evt (evt.id)}
-                            <EventCard event={evt} />
+                        {#each sortedAndFilteredEvents as evt (evt.id)}
+                            <EventCard event={evt} {viewMode} />
                         {/each}
                     </div>
                 {:else}
                     <div
-                        class="flex flex-col items-center justify-center h-64 border border-dashed border-slate-700 rounded-2xl bg-slate-800/30 w-full mt-10"
+                        class="flex flex-col items-center justify-center h-64 border border-dashed border-slate-700/60 rounded-2xl bg-slate-800/20 w-full mt-6"
                     >
                         <div
                             class="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mb-4 text-slate-500"
                         >
                             <Calendar class="w-6 h-6" />
                         </div>
-                        <p class="text-slate-400 font-medium">
-                            No upcoming events found.
+                        <p class="text-slate-300 font-semibold mb-1">
+                            No upcoming events found
                         </p>
-                        <p class="text-slate-500 text-sm mt-1">
-                            Try harvesting opportunities to gather more event
-                            intel.
+                        <p class="text-slate-500 text-sm max-w-sm text-center">
+                            Try adjusting your search or filters, or trigger a
+                            new harvest to find events.
                         </p>
                     </div>
                 {/if}

@@ -19,22 +19,28 @@
 </script>
 
 <aside
-    class="w-64 h-full bg-slate-900/60 backdrop-blur-xl border-r border-slate-800 flex flex-col transition-all duration-300 relative z-20"
+    class="w-64 h-full bg-slate-800/80 backdrop-blur-xl border-r border-slate-700/60 flex flex-col transition-all duration-300 relative z-20"
 >
-    <div class="h-20 flex items-center px-6 border-b border-slate-800/60 pt-2">
-        <div class="flex items-center gap-3">
+    <div
+        class="min-h-[120px] flex items-center px-4 border-b border-slate-700/60 bg-white/5 py-4 shadow-sm"
+    >
+        <div class="flex items-center gap-4">
             <div
-                class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20"
+                class="w-[100px] h-[100px] flex items-center justify-center shrink-0"
             >
-                <Target class="w-5 h-5 text-white" />
+                <img
+                    src="/gdip_icon_256.png"
+                    alt="GDIP Logo"
+                    class="w-full h-full object-contain drop-shadow-md brightness-110"
+                />
             </div>
             <div class="flex flex-col">
                 <span
-                    class="font-bold text-lg text-slate-100 tracking-tight leading-none leading-tight font-sans"
+                    class="font-bold text-xl text-slate-50 tracking-tight leading-none mb-1 font-sans"
                     >GDIP</span
                 >
                 <span
-                    class="text-[10px] text-blue-400 font-medium tracking-wider uppercase"
+                    class="text-[10px] text-blue-300 font-semibold tracking-wider uppercase leading-snug max-w-[120px]"
                     >Global Defence Insight Platform</span
                 >
             </div>
@@ -87,7 +93,7 @@
             </div>
             <div class="flex flex-col flex-1 overflow-hidden">
                 <span class="text-sm font-medium text-slate-200 truncate"
-                    >S. Moran</span
+                    >Stu Morris</span
                 >
                 <span class="text-xs text-slate-500 truncate">System Admin</span
                 >

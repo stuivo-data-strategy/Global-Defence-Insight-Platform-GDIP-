@@ -55,6 +55,52 @@
     let newActivityDueDate = "";
     let isAddingActivity = false;
 
+    // Translation State
+    let isTranslated = false;
+    let isTransactingTranslation = false;
+    let translatedText = "";
+
+    $: if (
+        isTranslated &&
+        opportunity &&
+        opportunity.description &&
+        !translatedText
+    ) {
+        isTransactingTranslation = true;
+
+        fetch("https://libretranslate.com/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                q: opportunity.description,
+                source: "auto",
+                target: "en",
+                format: "text",
+            }),
+        })
+            .then((res) => {
+                if (!res.ok) throw new Error("Translation API Error");
+                return res.json();
+            })
+            .then((data) => {
+                translatedText =
+                    data.translatedText || "Translation returned empty.";
+            })
+            .catch((err) => {
+                console.error("Translation failed:", err);
+                translatedText = `Error: Could not translate this text.\n\n${err.message}\n\nOriginal Text:\n${opportunity?.description}`;
+            })
+            .finally(() => {
+                isTransactingTranslation = false;
+            });
+    }
+
+    // Reset translation when opportunity changes
+    $: if (opportunity) {
+        isTranslated = false;
+        translatedText = "";
+    }
+
     const activityTypes = [
         {
             value: "task",
@@ -389,18 +435,56 @@
             </div>
 
             <!-- Full Description -->
-            <div class="mb-10">
-                <h3
-                    class="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"
-                >
-                    <div class="w-1 h-4 bg-blue-500 rounded-full"></div>
-                    Intelligence Overview
-                </h3>
-                <p
-                    class="text-slate-300 leading-relaxed text-[15px] whitespace-pre-wrap"
-                >
-                    {opportunity.description}
-                </p>
+            <div class="mb-10 relative">
+                <div class="flex items-center justify-between mb-4">
+                    <h3
+                        class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2"
+                    >
+                        <div class="w-1 h-4 bg-blue-500 rounded-full"></div>
+                        Intelligence Overview
+                    </h3>
+
+                    <button
+                        on:click={() => {
+                            isTranslated = !isTranslated;
+                        }}
+                        class="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors {isTranslated
+                            ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                            : 'bg-slate-800 text-slate-400 border border-slate-700/60 hover:text-white hover:bg-slate-700'}"
+                    >
+                        <Globe2 class="w-3.5 h-3.5" />
+                        {isTranslated
+                            ? "Show Original"
+                            : "Translate to English"}
+                    </button>
+                </div>
+
+                <div class="relative">
+                    {#if isTransactingTranslation}
+                        <div
+                            class="absolute inset-0 bg-slate-900/50 backdrop-blur-[1px] flex items-center justify-center z-10 rounded-xl"
+                        >
+                            <Loader2
+                                class="w-6 h-6 animate-spin text-blue-500"
+                            />
+                        </div>
+                    {/if}
+                    <p
+                        class="text-slate-300 leading-relaxed text-[15px] whitespace-pre-wrap transition-opacity duration-300 {isTransactingTranslation
+                            ? 'opacity-50'
+                            : 'opacity-100'}"
+                    >
+                        {#if isTranslated}
+                            <span
+                                class="text-xs font-mono text-slate-500 block mb-3 pb-3 border-b border-slate-700/50"
+                                >[Machine Translated to English]</span
+                            >
+                            {translatedText}
+                        {:else}
+                            {opportunity.description}
+                        {/if}
+                    </p>
+                </div>
             </div>
 
             <!-- CRM & Strategy Section -->

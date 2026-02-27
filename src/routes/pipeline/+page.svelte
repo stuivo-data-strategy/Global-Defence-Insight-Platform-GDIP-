@@ -151,7 +151,7 @@
     };
 </script>
 
-<div class="flex h-screen w-full bg-[#0a0f1c] relative overflow-hidden">
+<div class="flex h-screen w-full bg-[#111827] relative overflow-hidden">
     <div
         class="absolute top-0 right-1/4 w-[500px] h-[500px] bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none mix-blend-screen mix-blend-color-dodge"
     ></div>
@@ -160,7 +160,7 @@
 
     <main class="flex-1 flex flex-col min-w-0 z-10 h-screen">
         <header
-            class="h-20 flex items-center justify-between px-8 border-b border-slate-800/60 bg-slate-900/40 backdrop-blur-md shrink-0"
+            class="h-20 flex items-center justify-between px-8 border-b border-slate-700/60 bg-slate-800/40 backdrop-blur-md shrink-0"
         >
             <div>
                 <h1
