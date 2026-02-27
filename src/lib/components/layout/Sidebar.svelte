@@ -35,7 +35,7 @@
                 >
                 <span
                     class="text-[10px] text-blue-400 font-medium tracking-wider uppercase"
-                    >SentinelScope</span
+                    >Global Defence Insight Platform</span
                 >
             </div>
         </div>

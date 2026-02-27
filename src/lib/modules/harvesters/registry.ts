@@ -1,5 +1,27 @@
 import type { Harvester, HarvesterMetadata, RawData, Opportunity, Event } from './types';
 
+// Defence keyword matching for filtering harvested events/opportunities
+const DEFENCE_KEYWORDS = [
+    'defence', 'defense', 'military', 'army', 'navy', 'air force', 'defense expo', 'defence expo', 'defence conference', 'defense conference', 'military symposium', 'defence summit', 'security', 'homeland'
+];
+
+function matchesDefenceText(text?: string): boolean {
+    if (!text) return false;
+    const lc = text.toLowerCase();
+    return DEFENCE_KEYWORDS.some(k => lc.includes(k));
+}
+
+function isDefenceEvent(ev: any): boolean {
+    // Check common fields: name, description, eventType
+    if (!ev) return false;
+    if (matchesDefenceText(ev.name)) return true;
+    if (matchesDefenceText(ev.description)) return true;
+    if (ev.eventType && matchesDefenceText(String(ev.eventType))) return true;
+    // fallback: check websiteUrl for defence keywords
+    if (matchesDefenceText(ev.websiteUrl)) return true;
+    return false;
+}
+
 export class HarvesterRegistry {
     private harvesters: Map<string, Harvester> = new Map();
 
@@ -50,11 +72,18 @@ export class HarvesterRegistry {
                 rawItems.forEach(raw => {
                     try {
                         const normalized = harvester.normalise(raw);
+                        // If params.defenceOnly is set, discard non-defence items
+                        const defenceOnly = params?.defenceOnly === true;
+
                         // Type narrowing based on inferred properties
                         if ('noticeType' in normalized) {
-                            opportunities.push(normalized as Opportunity);
+                            if (!defenceOnly || matchesDefenceText((normalized as Opportunity).title || (normalized as Opportunity).description)) {
+                                opportunities.push(normalized as Opportunity);
+                            }
                         } else if ('eventType' in normalized) {
-                            events.push(normalized as Event);
+                            if (!defenceOnly || isDefenceEvent(normalized)) {
+                                events.push(normalized as Event);
+                            }
                         }
                     } catch (e) {
                         console.error(`[Harvester] Error normalising item ${raw.id} from ${metadata.name}:`, e);
@@ -91,10 +120,15 @@ export class HarvesterRegistry {
         rawItems.forEach(raw => {
             try {
                 const normalized = harvester.normalise(raw);
+                const defenceOnly = params?.defenceOnly === true;
                 if ('noticeType' in normalized) {
-                    opportunities.push(normalized as Opportunity);
+                    if (!defenceOnly || matchesDefenceText((normalized as Opportunity).title || (normalized as Opportunity).description)) {
+                        opportunities.push(normalized as Opportunity);
+                    }
                 } else if ('eventType' in normalized) {
-                    events.push(normalized as Event);
+                    if (!defenceOnly || isDefenceEvent(normalized)) {
+                        events.push(normalized as Event);
+                    }
                 }
             } catch (e) {
                 console.error(`[Harvester] Error normalising item ${raw.id}:`, e);

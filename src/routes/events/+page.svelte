@@ -4,6 +4,7 @@
     import type { Event } from "$lib/modules/harvesters/types";
     import { Search, Bell, Loader2, Calendar } from "lucide-svelte";
     import type { PageData } from "./$types";
+    import defenceSeedUrls from '$lib/harvest_seeds/defenceSeedUrls';
 
     export let data: PageData;
     $: events = data.events || [];
@@ -20,6 +21,74 @@
             evt.description?.toLowerCase().includes(q)
         );
     });
+
+    // Harvesting state and actions
+    let harvesting = false;
+
+    async function harvestEvents() {
+        if (harvesting) return;
+        harvesting = true;
+        try {
+            // Seed URLs to try extracting schema.org JSON-LD from industry listing pages
+            const seedUrls = defenceSeedUrls;
+
+            const defenceQuery = 'defence OR defense OR military OR "defence expo" OR "defense expo" OR conference OR summit OR exhibition';
+
+            const sources = ['meetup-harvester', 'tentimes-harvester', 'schema-org-harvester'];
+            for (const s of sources) {
+                await fetch('/api/harvest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ count: 500, source: s, urls: seedUrls, q: defenceQuery, defenceOnly: true })
+                });
+            }
+
+            location.reload();
+        } catch (e) {
+            console.error('Harvest failed', e);
+            alert('Harvest failed. See console for details.');
+        } finally {
+            harvesting = false;
+        }
+    }
+
+    async function clearMockEvents() {
+        if (!confirm('Delete mock events? This cannot be undone.')) return;
+        try {
+            const res = await fetch('/api/events/clear-mock', { method: 'POST' });
+            const j = await res.json();
+            if (j.success) {
+                alert(`Deleted ${j.deleted || 0} mock events`);
+                location.reload();
+            } else {
+                alert('Failed to delete mock events: ' + (j.error || 'unknown'));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Failed to clear mock events');
+        }
+    }
+
+    async function purgeAllEvents() {
+        if (!confirm('Delete ALL events? This will remove every event record.')) return;
+        try {
+            const res = await fetch('/api/events/purge', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirm: true })
+            });
+            const j = await res.json();
+            if (j.success) {
+                alert('All events deleted');
+                location.reload();
+            } else {
+                alert('Failed to delete events: ' + (j.error || 'unknown'));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Failed to delete events');
+        }
+    }
 </script>
 
 <div class="flex h-full w-full bg-[#0a0f1c] relative overflow-hidden">
@@ -84,8 +153,30 @@
                         </p>
                     </div>
 
+                    <div class="flex items-center gap-3">
+                        <button
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                            on:click={harvestEvents}
+                        >
+                            Harvest Events
+                        </button>
+                        <button
+                            class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+                            on:click={clearMockEvents}
+                        >
+                            Clear Mock Events
+                        </button>
+                        <button
+                            class="bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 transition"
+                            on:click={purgeAllEvents}
+                        >
+                            Delete All Events
+                        </button>
+                    </div>
                     <!-- We can add 'Filter Views' here later just like Opportunities -->
                 </div>
+
+                
 
                 <!-- Events Grid -->
                 {#if filteredEvents.length > 0}
